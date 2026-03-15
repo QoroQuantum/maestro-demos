@@ -105,6 +105,15 @@ Loschmidt echo cusps after a sudden TFIM quench. Non-analytic singularities in t
 
 ---
 
+### 7. [Surface Code Noise](./surface_code_noise) ⚡
+
+Coherent vs Pauli noise analysis on surface code circuits. Reveals error correlations that stabiliser simulators (Stim) fundamentally cannot capture.
+
+**The bottleneck:** Surface codes at d=5+ have 49+ qubits with deep CX networks. MPS at high χ is needed to faithfully track coherent noise correlations.
+**The fix:** GPU mode enables high-fidelity noise characterisation at scale — understanding real hardware noise beyond Pauli approximations.
+
+---
+
 ## Ready to Scale?
 
 Every example in this repo works locally on CPU. But when you're ready to go beyond toy parameters:
