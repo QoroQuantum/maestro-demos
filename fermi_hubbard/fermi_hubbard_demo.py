@@ -135,11 +135,11 @@ def run_scout(n_sites, total_qubits, init_wall_idx):
 
     obs_list = build_z_observables(total_qubits)
 
-    result = scout_circuit.estimate(
-        observables=obs_list,
+    config = maestro.SimulatorConfig(
         simulator_type=maestro.SimulatorType.QCSim,
         simulation_type=maestro.SimulationType.PauliPropagator,
     )
+    result = scout_circuit.estimate(obs_list, config)
     z_vals = result['expectation_values']
     scout_elapsed = time.time() - scout_start_time
 
@@ -187,13 +187,14 @@ def run_sniper_cpu(start, end, init_wall_idx, chi=CHI_CPU):
     )
     obs_list = build_z_observables(n_qubits)
 
-    start_time = time.time()
-    result = circuit.estimate(
-        observables=obs_list,
+    config = maestro.SimulatorConfig(
         simulator_type=maestro.SimulatorType.QCSim,
         simulation_type=maestro.SimulationType.MatrixProductState,
         max_bond_dimension=chi,
     )
+
+    start_time = time.time()
+    result = circuit.estimate(obs_list, config)
     elapsed = time.time() - start_time
 
     print(f"    Completed in {elapsed:.2f}s")
@@ -224,13 +225,14 @@ def run_precision(start, end, init_wall_idx, chi=CHI_GPU, use_gpu=False):
 
     sim_type = maestro.SimulatorType.Gpu if use_gpu else maestro.SimulatorType.QCSim
 
-    start_time = time.time()
-    result = circuit.estimate(
-        observables=obs_list,
+    config = maestro.SimulatorConfig(
         simulator_type=sim_type,
         simulation_type=maestro.SimulationType.MatrixProductState,
         max_bond_dimension=chi,
     )
+
+    start_time = time.time()
+    result = circuit.estimate(obs_list, config)
     elapsed = time.time() - start_time
 
     print(f"    Completed in {elapsed:.2f}s")

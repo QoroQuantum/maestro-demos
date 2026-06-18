@@ -96,12 +96,11 @@ def compute_energy(qc, n, bonds, j, h, chi, simulator_type, use_gpu):
     sim_type = (maestro.SimulatorType.Gpu if use_gpu
                 else maestro.SimulatorType.QCSim)
 
-    result = qc.estimate(
+    result = qc.estimate(obs, maestro.SimulatorConfig(
         simulator_type=sim_type,
         simulation_type=maestro.SimulationType.MatrixProductState,
-        observables=obs,
         max_bond_dimension=chi,
-    )
+    ))
 
     exp_vals = result['expectation_values']
     n_bonds = len(bonds)

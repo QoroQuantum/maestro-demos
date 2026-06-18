@@ -204,10 +204,9 @@ def scout_entanglement(config: Config, n_steps: int = 3) -> dict:
         build_pauli_observable(n, {q1: 'Z', q2: 'Z'})
         for q1, q2 in bonds
     ]
-    result = qc.estimate(
+    result = qc.estimate(observables, maestro.SimulatorConfig(
         simulation_type=maestro.SimulationType.PauliPropagator,
-        observables=observables,
-    )
+    ))
     exp_vals = result['expectation_values']
 
     def coordination(q):
@@ -335,12 +334,11 @@ def collect_shadow_snapshots(
         labels = append_random_clifford_layer(qc, n, rng)
         qc.measure_all()
 
-        result = qc.execute(
+        result = qc.execute(maestro.SimulatorConfig(
             simulator_type=config.simulator_type,
             simulation_type=maestro.SimulationType.MatrixProductState,
-            shots=1,
             max_bond_dimension=config.chi_high if config.use_gpu else config.chi_low,
-        )
+        ), shots=1)
         bitstring = list(result['counts'].keys())[0]
         bits = [int(b) for b in bitstring[:n]]
 

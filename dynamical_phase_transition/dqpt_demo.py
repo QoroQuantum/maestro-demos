@@ -237,12 +237,11 @@ def run_dqpt_sweep(n_qubits, j, h_values, n_steps, dt, chi, use_gpu):
 
             qc = build_quench_circuit(n_qubits, j, h_f, dt, step)
 
-            res = qc.estimate(
+            res = qc.estimate(x_observables, maestro.SimulatorConfig(
                 simulator_type=sim_type,
                 simulation_type=maestro.SimulationType.MatrixProductState,
-                observables=x_observables,
                 max_bond_dimension=chi,
-            )
+            ))
 
             wall = time.time() - t0
             t_val = step * dt

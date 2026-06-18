@@ -66,12 +66,11 @@ def main():
         print(f"\n  Acquiring {num_shots} shots from MPS backend (χ={max_bond_dim})...")
         start_t = time.time()
 
-        sample_res = qc.execute(
+        sample_res = qc.execute(maestro.SimulatorConfig(
             simulator_type=maestro.SimulatorType.QCSim,
             simulation_type=maestro.SimulationType.MatrixProductState,
-            shots=num_shots,
             max_bond_dimension=max_bond_dim,
-        )
+        ), shots=num_shots)
 
         print(f"  Sampling completed in {time.time() - start_t:.2f}s")
 

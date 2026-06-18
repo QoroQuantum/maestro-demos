@@ -268,12 +268,11 @@ def run_scarring_experiment(n_atoms, omega, interaction_v, n_steps, dt,
 
         qc = build_pxp_circuit(n_atoms, omega, interaction_v, dt, step)
 
-        res = qc.estimate(
+        res = qc.estimate(observables, maestro.SimulatorConfig(
             simulator_type=sim_type,
             simulation_type=maestro.SimulationType.MatrixProductState,
-            observables=observables,
             max_bond_dimension=chi,
-        )
+        ))
 
         z_expects = res['expectation_values']
         stag_mag = compute_staggered_magnetization(z_expects, n_atoms)

@@ -132,12 +132,11 @@ def measure_noise_impact(model, noise_type, noise_strength,
             seed=seed,
         )
 
-        result = qc.estimate(
-            observables=all_obs,
+        result = qc.estimate(all_obs, maestro.SimulatorConfig(
             simulator_type=sim_type,
             simulation_type=maestro.SimulationType.MatrixProductState,
             max_bond_dimension=chi,
-        )
+        ))
 
         exp_vals = result['expectation_values']
         data_z = np.array(exp_vals[:model.n_data])
@@ -313,15 +312,14 @@ def run_backend_comparison(distance, chi):
                 seed=seed,
             )
 
-            kwargs = {
-                'observables': all_obs,
+            config_kwargs = {
                 'simulator_type': maestro.SimulatorType.QCSim,
                 'simulation_type': sim_type,
             }
             if sim_type == maestro.SimulationType.MatrixProductState:
-                kwargs['max_bond_dimension'] = chi
+                config_kwargs['max_bond_dimension'] = chi
 
-            result = qc.estimate(**kwargs)
+            result = qc.estimate(all_obs, maestro.SimulatorConfig(**config_kwargs))
             exp_vals = result['expectation_values']
             all_data.append(np.mean(exp_vals[:model.n_data]))
             all_logical.append(exp_vals[-1])
@@ -347,12 +345,11 @@ def run_backend_comparison(distance, chi):
         noise_type='coherent',
         noise_strength=p,
     )
-    result_coh = qc_coh.estimate(
-        observables=all_obs,
+    result_coh = qc_coh.estimate(all_obs, maestro.SimulatorConfig(
         simulator_type=maestro.SimulatorType.QCSim,
         simulation_type=maestro.SimulationType.MatrixProductState,
         max_bond_dimension=chi,
-    )
+    ))
     elapsed_coh_ms = (time.perf_counter() - t0) * 1000
     coh_logical = result_coh['expectation_values'][-1]
     coh_data = float(np.mean(result_coh['expectation_values'][:model.n_data]))

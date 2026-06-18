@@ -13,18 +13,20 @@ Maestro's GPU backend (`SimulatorType.Gpu`) parallelizes those O(χ³) contracti
 
 ```python
 # CPU — works, but slow at high bond dimension
-result = qc.estimate(
+config = maestro.SimulatorConfig(
     simulator_type=maestro.SimulatorType.QCSim,
     simulation_type=maestro.SimulationType.MatrixProductState,
     max_bond_dimension=64,
 )
+result = qc.estimate(observables, config)
 
 # GPU — same API, same code, just swap one argument
-result = qc.estimate(
+config = maestro.SimulatorConfig(
     simulator_type=maestro.SimulatorType.Gpu,          # ← GPU
     simulation_type=maestro.SimulationType.MatrixProductState,
     max_bond_dimension=256,                                   # ← go higher
 )
+result = qc.estimate(observables, config)
 ```
 
 Every example below follows the same pattern: **Phase 1** runs locally on CPU with modest parameters to prove the physics works. **Phase 2** scales up with GPU mode — because your CPU shouldn't be the bottleneck.
@@ -140,9 +142,10 @@ python scarring_demo.py --gpu
 |---------|-----|----------|
 | Matrix Product State | `SimulationType.MatrixProductState` | All examples |
 | Pauli Propagator | `SimulationType.PauliPropagator` | Fermi-Hubbard (Tier 1) |
+| Backend configuration | `SimulatorConfig(...)` | All examples |
 | Bond dimension control | `max_bond_dimension=χ` | All examples |
-| Expectation values | `qc.estimate(observables=...)` | All examples |
-| Bitstring sampling | `qc.execute(shots=N)` | Rydberg, Classical Shadows |
+| Expectation values | `qc.estimate(obs, config)` | All examples |
+| Bitstring sampling | `qc.execute(config, shots=N)` | Rydberg, Classical Shadows |
 | CPU backend | `SimulatorType.QCSim` | All examples |
 | GPU acceleration | `SimulatorType.Gpu` | All examples (Phase 2) |
 

@@ -181,12 +181,11 @@ def main():
             )
 
             try:
-                res = qc.estimate(
-                    observables=observables,
+                res = qc.estimate(observables, maestro.SimulatorConfig(
                     simulator_type=maestro.SimulatorType.QCSim,
                     simulation_type=maestro.SimulationType.MatrixProductState,
                     max_bond_dimension=max_bond_dim,
-                )
+                ))
 
                 if res and 'expectation_values' in res:
                     z_expects = res['expectation_values']
