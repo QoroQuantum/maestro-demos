@@ -1,7 +1,5 @@
 # GPU MPS Crossover Benchmark
 
-> 🚀 **Find where GPU MPS beats CPU MPS.** Sweeps system size, bond dimension, and circuit depth to identify the crossover threshold.
-
 Two physically demanding models stress-test MPS simulation with competing interactions and non-local couplings. Two benchmarks probe the regimes where GPU parallelism pays off.
 
 ## Physics Models
