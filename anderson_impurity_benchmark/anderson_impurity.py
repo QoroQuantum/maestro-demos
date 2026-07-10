@@ -138,7 +138,7 @@ class AndersonImpurity:
     # Benchmark B: Quench + Trotterized time evolution
     # ─────────────────────────────────────────────────────────────────
 
-    def build_quench_circuit(self, dt, n_steps, init_state='half_filled'):
+    def build_quench_circuit(self, dt, n_steps, init_state='half_filled', order=1):
         """
         Build a Trotterized time-evolution circuit.
 
@@ -156,6 +156,7 @@ class AndersonImpurity:
             n_steps: Number of Trotter steps.
             init_state: 'half_filled' (impurity occupied, bath empty) or
                         'neel' (alternating occupation).
+            order: Trotter expansion order (1 or 2).
 
         Returns:
             A QuantumCircuit instance.
@@ -175,25 +176,43 @@ class AndersonImpurity:
         else:
             raise ValueError(f"Unknown init_state: {init_state}")
 
+        def _apply_on_site(step_dt):
+            # n = (I - Z)/2. exp(-i ε dt (I-Z)/2) -> exp(+i ε dt Z / 2) -> Rz(-ε dt)
+            qc.rz(self.imp_up, -self.eps_d * step_dt)
+            qc.rz(self.imp_down, -self.eps_d * step_dt)
+            for k in range(self.n_bath_sites):
+                qc.rz(self.bath_up(k), -self.eps_bath[k] * step_dt)
+                qc.rz(self.bath_down(k), -self.eps_bath[k] * step_dt)
+
+        def _apply_hybridization(step_dt, reverse=False):
+            bath_indices = list(range(self.n_bath_sites))
+            if reverse:
+                bath_indices.reverse()
+            for k in bath_indices:
+                if not reverse:
+                    self._add_hopping(qc, self.imp_up, self.bath_up(k), step_dt, reverse=False)
+                    self._add_hopping(qc, self.imp_down, self.bath_down(k), step_dt, reverse=False)
+                else:
+                    self._add_hopping(qc, self.imp_down, self.bath_down(k), step_dt, reverse=True)
+                    self._add_hopping(qc, self.imp_up, self.bath_up(k), step_dt, reverse=True)
+
         # ── Trotter Steps ──
         for _ in range(n_steps):
-            # a. On-site energies: exp(-i ε_d dt n_{d,σ})
-            #    n = (I - Z) / 2  →  exp(-i ε dt (I-Z)/2) = phase * Rz(ε dt)
-            qc.rz(self.imp_up, self.eps_d * dt)
-            qc.rz(self.imp_down, self.eps_d * dt)
-
-            for k in range(self.n_bath_sites):
-                qc.rz(self.bath_up(k), self.eps_bath[k] * dt)
-                qc.rz(self.bath_down(k), self.eps_bath[k] * dt)
-
-            # b. Hubbard U: exp(-i U dt n_{d,↑} n_{d,↓})
-            #    n_↑ n_↓ = (I - Z_↑ - Z_↓ + Z_↑Z_↓) / 4
-            self._add_hubbard_u(qc, dt)
-
-            # c. Hybridization V: exp(-i V dt (XX + YY) / 2) for each bath site
-            for k in range(self.n_bath_sites):
-                self._add_hopping(qc, self.imp_up, self.bath_up(k), dt)
-                self._add_hopping(qc, self.imp_down, self.bath_down(k), dt)
+            if order == 1:
+                _apply_on_site(dt)
+                self._add_hubbard_u(qc, dt)
+                _apply_hybridization(dt)
+            elif order == 2:
+                # Symmetric 2nd-order Suzuki-Trotter
+                # e^(A/2) e^(B/2) e^(C) e^(B/2) e^(A/2)
+                _apply_on_site(dt / 2.0)
+                self._add_hubbard_u(qc, dt / 2.0)
+                _apply_hybridization(dt / 2.0, reverse=False)
+                _apply_hybridization(dt / 2.0, reverse=True)
+                self._add_hubbard_u(qc, dt / 2.0)
+                _apply_on_site(dt / 2.0)
+            else:
+                raise ValueError(f"Unsupported Trotter order: {order}")
 
         return qc
 
@@ -242,18 +261,21 @@ class AndersonImpurity:
         ))
         coefficients.append(self.u / 4.0)
 
-        # Hybridization V: V/2 * (XX + YY) for each imp-bath pair
+        # Hybridization V: V/2 * (X Z...Z X + Y Z...Z Y) for each imp-bath pair
         for k in range(self.n_bath_sites):
             for pauli in ['X', 'Y']:
                 # Spin-up
-                observables.append(_pauli_string(
-                    {self.imp_up: pauli, self.bath_up(k): pauli}
-                ))
+                obs_map = {self.imp_up: pauli, self.bath_up(k): pauli}
+                for i in range(min(self.imp_up, self.bath_up(k)) + 1, max(self.imp_up, self.bath_up(k))):
+                    obs_map[i] = 'Z'
+                observables.append(_pauli_string(obs_map))
                 coefficients.append(self.v / 2.0)
+                
                 # Spin-down
-                observables.append(_pauli_string(
-                    {self.imp_down: pauli, self.bath_down(k): pauli}
-                ))
+                obs_map = {self.imp_down: pauli, self.bath_down(k): pauli}
+                for i in range(min(self.imp_down, self.bath_down(k)) + 1, max(self.imp_down, self.bath_down(k))):
+                    obs_map[i] = 'Z'
+                observables.append(_pauli_string(obs_map))
                 coefficients.append(self.v / 2.0)
 
         return observables, coefficients
@@ -293,30 +315,45 @@ class AndersonImpurity:
         qc.rz(q_down, 2.0 * alpha)
         qc.cx(q_up, q_down)
 
-    def _add_hopping(self, qc, q1, q2, dt):
+    def _add_hopping(self, qc, q1, q2, dt, reverse=False):
         """
-        Implement exp(-i V dt (XX + YY) / 2) — hopping term.
+        Implement exp(-i V dt (X Z...Z X + Y Z...Z Y) / 2) — hopping term.
 
-        Decomposed as:
-            exp(-iθ XX/2): H-H → CX → Rz(θ) → CX → H-H
-            exp(-iθ YY/2): Sdg-Sdg → H-H → CX → Rz(θ) → CX → H-H → S-S
-
-        where θ = V · dt.
+        Decomposed using Jordan-Wigner strings.
         """
         theta = self.v * dt
+        
+        # Ensure q1 < q2 for the Z-string cascade
+        start_q = min(q1, q2)
+        end_q = max(q1, q2)
+        
+        def apply_cx_cascade():
+            for i in range(start_q, end_q):
+                qc.cx(i, i+1)
+                
+        def apply_cx_cascade_reversed():
+            for i in reversed(range(start_q, end_q)):
+                qc.cx(i, i+1)
 
-        # exp(-iθ XX/2)
-        qc.h(q1); qc.h(q2)
-        qc.cx(q1, q2)
-        qc.rz(q2, theta)
-        qc.cx(q1, q2)
-        qc.h(q1); qc.h(q2)
+        def _apply_xx():
+            qc.h(start_q); qc.h(end_q)
+            apply_cx_cascade()
+            qc.rz(end_q, theta)
+            apply_cx_cascade_reversed()
+            qc.h(start_q); qc.h(end_q)
 
-        # exp(-iθ YY/2)
-        qc.sdg(q1); qc.sdg(q2)
-        qc.h(q1); qc.h(q2)
-        qc.cx(q1, q2)
-        qc.rz(q2, theta)
-        qc.cx(q1, q2)
-        qc.h(q1); qc.h(q2)
-        qc.s(q1); qc.s(q2)
+        def _apply_yy():
+            qc.sdg(start_q); qc.sdg(end_q)
+            qc.h(start_q); qc.h(end_q)
+            apply_cx_cascade()
+            qc.rz(end_q, theta)
+            apply_cx_cascade_reversed()
+            qc.h(start_q); qc.h(end_q)
+            qc.s(start_q); qc.s(end_q)
+
+        if not reverse:
+            _apply_xx()
+            _apply_yy()
+        else:
+            _apply_yy()
+            _apply_xx()
