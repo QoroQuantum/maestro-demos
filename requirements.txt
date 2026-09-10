@@ -1,3 +1,6 @@
-qoro-maestro
+qoro-maestro>=0.3.1
+stim>=1.14
+sinter>=1.14
+pymatching>=2.0
 numpy
 matplotlib

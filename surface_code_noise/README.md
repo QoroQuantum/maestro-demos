@@ -1,70 +1,65 @@
-# Surface Code Noise: Coherent vs Pauli
+# Surface Code QEC with Stim & Sinter in Maestro 0.3.1
 
-> 🚀 **Try Maestro GPU mode with a free trial.**
-> Sign up at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** — no credit card required.
+> 🚀 **Benchmark QEC with Maestro and Stim.**
+> Try Maestro GPU mode with a free trial at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** — no credit card required.
 
 ## What It Does
 
-Simulates **noisy CX networks** in surface code topology using multiple Maestro backends to demonstrate:
+This showcase demonstrates Maestro 0.3.1's native **Sinter and Stim integration** (`maestro.sinter`) for quantum error correction (QEC) benchmarking:
 
-1. **Coherent vs Pauli noise** — Reveals fundamentally different error landscapes that Stim cannot distinguish
-2. **Multi-backend comparison** — PauliPropagator, Stabilizer, and MPS all agree on Clifford noise; only MPS can do coherent noise
-3. **Spatial error structure** — Coherent noise creates structured, correlated patterns; Pauli noise is uniform
+1. **Drop-in Sinter Sampler**: Define standard rotated surface code circuits using Stim (`stim.Circuit.generated("surface_code:rotated_memory_z", ...)`), and run standard Sinter benchmarks with PyMatching using Maestro's Matrix Product State (MPS) engine (`MaestroSinterSampler`).
+2. **Equivalent Pauli Baseline**: Demonstrates that Maestro seamlessly reproduces Stim's logical error rates on standard depolarizing noise.
+3. **Beyond-Clifford Reality (The Maestro Advantage)**: Real quantum processors suffer from coherent over-rotations and idle dephasing during delays. Stim cannot simulate non-Clifford rotations. Maestro's tensor-network simulation natively tracks coherent noise accumulation and idle decoherence (`set_idle_noise`), demonstrating how realistic hardware noise affects the error threshold.
 
-> *"Stim shows you one noise model. Maestro shows you reality."*
+---
 
-### Noise Models
-
-| Noise Model | How it works | Backends |
-|-------------|-------------|----------|
-| **Pauli** (incoherent) | Random Rz/Rx rotations per qubit per round | PauliPropagator, Stabilizer, MPS |
-| **Clifford Pauli** | Probabilistic X/Y/Z gate insertion | PauliPropagator, Stabilizer, MPS |
-| **Coherent** (systematic) | Deterministic over-rotations that accumulate | **MPS only** |
-
-## Usage
+## Quickstart
 
 ```bash
-# CPU: d=3 and d=5 noise sweeps (~40s)
+# Install requirements
+pip install -r ../requirements.txt
+
+# Run the standard benchmark (d=3, d=5 on CPU MPS)
 python qec_demo.py
 
-# GPU: adds d=7 (97 qubits)
+# Quick preview (fewer shots and noise points)
+python qec_demo.py --quick
+
+# Enable GPU-accelerated MPS simulation
 python qec_demo.py --gpu
 
-# Custom distance
-python qec_demo.py --distance 7 --gpu
+# Custom shot count
+python qec_demo.py --shots 5000
 ```
 
-Or use the Jupyter notebook: `surface_code_noise.ipynb`
+Or open the interactive Jupyter notebook:
+```bash
+jupyter notebook surface_code_noise.ipynb
+```
+
+---
 
 ## Code Structure
 
 | File | Purpose |
 |------|---------|
-| `model.py` | `SurfaceCodeModel` — rotated surface code layout, CX networks, noise injection |
-| `qec_demo.py` | Full pipeline: noise sweep, spatial analysis, backend comparison |
-| `plotting.py` | Plot functions (noise comparison, heatmaps, backend bars, scaling) |
-| `surface_code_noise.ipynb` | Interactive notebook version |
-
-## Output
-
-| File | Description |
-|------|-------------|
-| `qec_noise_comparison.png` | ⟨Z_L⟩ vs noise strength for d=3 and d=5 |
-| `qec_syndrome_heatmap.png` | Spatial error patterns: uniform (Pauli) vs structured (coherent) |
-| `qec_backend_comparison.png` | All backends agree on Pauli; only MPS captures coherent |
-| `qec_distance_scaling.png` | Fidelity gap across distances |
-
-## Configuration
-
-| Parameter | Default |
-|-----------|---------|
-| Distances | d=3, d=5 (CPU) |
-| CPU χ | 32 |
-| GPU χ | 64 |
-| Noise range | 0.005 – 0.05 |
-| CX rounds | 3 |
-| Pauli samples | 20 |
+| `qec_demo.py` | Full QEC benchmarking script: Stim circuit generation, Sinter collection, Act 1 baseline, Act 2 coherent noise, and plotting |
+| `qec_plotting.py` | Publication-ready plotting helpers for logical threshold curves and noise comparisons |
+| `surface_code_model.py` | Optional manual rotated surface code circuit builder for fine-grained gate inspection |
+| `surface_code_noise.ipynb` | Interactive step-by-step notebook tutorial matching the blog post |
 
 ---
 
-👉 **Ready for GPU-accelerated noise analysis?** [Start your free GPU trial](https://maestro.qoroquantum.net) and run with `--gpu`.
+## Generated Artifacts
+
+| File | Description |
+|------|-------------|
+| `qec_threshold_curve.png` | Logical error rate ($P_L$) vs physical error rate ($p$) across code distances $d=3$ and $d=5$ |
+| `qec_noise_comparison.png` | Shift in decoder performance between incoherent Pauli depolarizing noise and coherent/idle noise |
+
+---
+
+## Blog Post Key Takeaways
+
+* **Standard Interoperability**: `MaestroSinterSampler` conforms directly to `sinter.Sampler`, meaning you can drop Maestro into any existing Sinter benchmark script with a one-line `custom_decoders={"maestro": MaestroSinterSampler(chi=32)}`.
+* **Beyond-Clifford Simulation**: While Stim is restricted to Clifford circuits, Maestro's MPS and GPU engines simulate general unitary rotations, coherent errors, and CPTP noise channels, unlocking realistic QEC threshold studies for hardware development.
