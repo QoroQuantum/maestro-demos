@@ -189,9 +189,14 @@ class SurfaceCodeModel:
                 qc.h(anc)
 
         # Measure all ancilla qubits
+        meas_pairs = []
+        cbit = 0
         for stab_list in [self.x_stabilisers, self.z_stabilisers]:
             for anc, _ in stab_list:
-                qc.measure(anc)
+                meas_pairs.append((anc, cbit))
+                cbit += 1
+        if meas_pairs:
+            qc.measure(meas_pairs)
 
         return qc
 
@@ -355,6 +360,13 @@ class SurfaceCodeModel:
         elif noise_type == 'coherent':
             qc.rz(qubit, strength)
             qc.rx(qubit, strength)
+
+    def _inject_noise(self, qc, q1, q2, noise_type, strength, rng):
+        """Inject noise on qubit pair after a two-qubit CX gate."""
+        if noise_type == 'none' or strength <= 0:
+            return
+        self._inject_qubit_noise(qc, q1, noise_type, strength, rng)
+        self._inject_qubit_noise(qc, q2, noise_type, strength, rng)
 
     def build_ancilla_observables(self):
         """Build Z observables for all ancilla qubits (syndrome readout)."""

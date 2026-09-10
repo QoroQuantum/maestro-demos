@@ -22,7 +22,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 import maestro
-from plotting import plot_crossover_summary, load_results
+from anderson_plotting import plot_crossover_summary, load_results
 
 GPU_ENABLED = '--gpu' in sys.argv
 FULL_SWEEP = '--full' in sys.argv

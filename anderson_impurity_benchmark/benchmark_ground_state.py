@@ -37,7 +37,7 @@ sys.path.insert(0, SCRIPT_DIR)
 
 from frustrated_heisenberg import FrustratedHeisenberg
 from anderson_impurity import AndersonImpurity
-from plotting import (
+from anderson_plotting import (
     plot_crossover_heatmap, plot_scaling_curves,
     plot_energy_convergence, plot_timing_bars, save_results,
 )

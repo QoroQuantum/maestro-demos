@@ -51,9 +51,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 import maestro
-from model import FermiHubbardModel
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+
+from fermi_hubbard_model import FermiHubbardModel
 
 
 # =============================================================================
