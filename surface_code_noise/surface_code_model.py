@@ -255,17 +255,16 @@ class SurfaceCodeModel:
         cx_pairs = self._get_nn_cx_pairs()
 
         for _ in range(n_rounds):
-            # Apply CX layer (no noise per gate)
             for q1, q2 in cx_pairs[::2]:
                 qc.cx(q1, q2)
+                if noise_type != 'none' and noise_strength > 0:
+                    self._inject_qubit_noise(qc, q1, noise_type, noise_strength, rng)
+                    self._inject_qubit_noise(qc, q2, noise_type, noise_strength, rng)
             for q1, q2 in cx_pairs[1::2]:
                 qc.cx(q1, q2)
-
-            # Inject noise ONCE per qubit per round
-            if noise_type != 'none' and noise_strength > 0:
-                for q in range(self.n_data):
-                    self._inject_qubit_noise(
-                        qc, q, noise_type, noise_strength, rng)
+                if noise_type != 'none' and noise_strength > 0:
+                    self._inject_qubit_noise(qc, q1, noise_type, noise_strength, rng)
+                    self._inject_qubit_noise(qc, q2, noise_type, noise_strength, rng)
 
         return qc
 
@@ -358,7 +357,6 @@ class SurfaceCodeModel:
             qc.rx(qubit, rng.normal(0, sigma))
 
         elif noise_type == 'coherent':
-            qc.rz(qubit, strength)
             qc.rx(qubit, strength)
 
     def _inject_noise(self, qc, q1, q2, noise_type, strength, rng):
